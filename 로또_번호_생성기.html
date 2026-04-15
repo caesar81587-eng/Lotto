@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로또 번호 생성기</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --card: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --text: #f1f1f5;
+    --muted: #8a8a99;
+    --accent: #d4af37;
+    --accent-2: #f4d06f;
+    --danger: #ff6b6b;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(212,175,55,0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(100,80,200,0.08), transparent 40%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 560px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 24px; }
+  header h1 {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    letter-spacing: -0.5px;
+  }
+  header p { color: var(--muted); margin-top: 6px; font-size: 13px; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px; margin-bottom: 20px;
+  }
+  .tab {
+    flex: 1; padding: 10px; background: transparent; border: none;
+    color: var(--muted); cursor: pointer; border-radius: 9px;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+  }
+  .tab.active { background: rgba(212,175,55,0.15); color: var(--accent-2); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px; margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .card-title {
+    font-size: 12px; color: var(--muted); margin-bottom: 10px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .row { display: flex; gap: 8px; }
+  input[type="password"], input[type="text"] {
+    flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 12px; border-radius: 10px;
+    font-size: 13px; outline: none; font-family: monospace;
+  }
+  input:focus { border-color: var(--accent); }
+
+  .btn {
+    background: rgba(212,175,55,0.15); color: var(--accent-2);
+    border: 1px solid rgba(212,175,55,0.3); padding: 10px 14px;
+    border-radius: 10px; cursor: pointer; font-size: 13px;
+    font-weight: 600; font-family: inherit;
+  }
+  .btn:hover { background: rgba(212,175,55,0.25); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sm { padding: 6px 10px; font-size: 11px; }
+  .btn-danger { background: rgba(255,107,107,0.1); color: var(--danger); border-color: rgba(255,107,107,0.3); }
+  .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+
+  .status { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  .generate-btn {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, var(--accent), #b8941f);
+    border: none; border-radius: 14px; color: #1a1a1a;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    margin-bottom: 20px; box-shadow: 0 8px 24px rgba(212,175,55,0.25);
+    transition: transform 0.15s; letter-spacing: -0.3px; font-family: inherit;
+  }
+  .generate-btn:hover { transform: translateY(-2px); }
+  .generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .sets { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .set {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px; backdrop-filter: blur(10px);
+  }
+  .set-row { display: flex; align-items: center; gap: 10px; }
+  .set-label { font-size: 12px; color: var(--muted); width: 24px; font-weight: 700; }
+  .balls { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+  .ball {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #fff;
+    box-shadow: inset -2px -3px 6px rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.35);
+    opacity: 0; transform: scale(0.3) translateY(-20px);
+    animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes pop { to { opacity: 1; transform: scale(1) translateY(0); } }
+  .ball.y { background: linear-gradient(135deg, #fbc02d, #f57f17); }
+  .ball.b { background: linear-gradient(135deg, #42a5f5, #1565c0); }
+  .ball.r { background: linear-gradient(135deg, #ef5350, #c62828); }
+  .ball.gr { background: linear-gradient(135deg, #757575, #424242); }
+  .ball.g { background: linear-gradient(135deg, #66bb6a, #2e7d32); }
+
+  .set-actions {
+    display: flex; gap: 6px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap;
+  }
+  .match-info { font-size: 11px; flex: 1; color: var(--muted); line-height: 1.4; min-width: 100%; }
+  .match-info.warn { color: #ffb74d; }
+  .match-info.ok { color: #81c784; }
+
+  .comment-box {
+    background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.03));
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 14px; padding: 16px; text-align: center;
+    font-size: 15px; color: var(--accent-2); min-height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1.5; margin-bottom: 16px;
+  }
+  .comment-box.hidden { display: none; }
+  .comment-box.error { color: #ff8a80; border-color: rgba(255,138,128,0.3); background: rgba(255,138,128,0.05); }
+  .loading-dots::after { content: '...'; display: inline-block; animation: dots 1.2s infinite; }
+  @keyframes dots {
+    0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; }
+  }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px); display: none;
+    align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: #1a1a24; border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; max-width: 360px;
+    width: 100%; text-align: center;
+  }
+  .modal h3 { margin-bottom: 12px; font-size: 16px; }
+  .qr-img { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 12px; margin: 12px auto; }
+  .qr-nums { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-family: monospace; letter-spacing: 1px; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+
+  .progress { height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0%; transition: width 0.3s; }
+
+  @media (max-width: 380px) {
+    .ball { width: 32px; height: 32px; font-size: 12px; }
+    .balls { gap: 5px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>✦ 행운의 로또 ✦</h1>
+      <p>1~45 중 6개 · 5세트 자동 생성</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="generate">🎲 생성</button>
+      <button class="tab" data-tab="favorites">⭐ 즐겨찾기</button>
+      <button class="tab" data-tab="settings">⚙ 설정</button>
+    </div>
+
+    <div class="tab-content" id="tab-generate" style="display: block;">
+      <button class="generate-btn" id="generateBtn">🎲 번호 생성하기</button>
+      <div class="sets" id="sets"></div>
+      <div class="comment-box hidden" id="commentBox"></div>
+    </div>
+
+    <div class="tab-content" id="tab-favorites" style="display:none">
+      <div id="favoritesList"></div>
+    </div>
+
+    <div class="tab-content" id="tab-settings" style="display: none;">
+      <div class="card">
+        <div class="card-title">즐겨찾기 관리</div>
+        <button class="btn btn-danger btn-sm" id="clearFavBtn">전체 삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" id="qrModal">
+    <div class="modal">
+      <h3>QR 코드</h3>
+      <div class="qr-nums" id="qrNums"></div>
+      <img class="qr-img" id="qrImg" alt="QR">
+      <div class="status" style="margin-bottom:12px">※ 매장 구매용이 아닌, 번호 저장/공유용입니다.</div>
+      <button class="btn" id="qrCloseBtn">닫기</button>
+    </div>
+  </div>
+
+<script>
+
+const FAV_KEY = 'lotto_favorites';
+const $ = id => document.getElementById(id);
+
+// 탭
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    $('tab-' + t.dataset.tab).style.display = 'block';
+    if (t.dataset.tab === 'favorites') renderFavorites();
+  });
+});
+
+// 번호 생성
+function getBallClass(n) {
+  if (n <= 10) return 'y';
+  if (n <= 20) return 'b';
+  if (n <= 30) return 'r';
+  if (n <= 40) return 'gr';
+  return 'g';
+}
+function generateSet() {
+  const nums = new Set();
+  while (nums.size < 6) nums.add(Math.floor(Math.random() * 45) + 1);
+  return [...nums].sort((a,b) => a-b);
+}
+
+function renderSets(sets) {
+  const setsEl = $('sets');
+  setsEl.innerHTML = '';
+  sets.forEach((set, setIdx) => {
+    const setDiv = document.createElement('div');
+    setDiv.className = 'set';
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    const label = document.createElement('div');
+    label.className = 'set-label';
+    label.textContent = `${setIdx + 1}`;
+    const ballsDiv = document.createElement('div');
+    ballsDiv.className = 'balls';
+    set.forEach((n, i) => {
+      const ball = document.createElement('div');
+      ball.className = `ball ${getBallClass(n)}`;
+      ball.textContent = n;
+      ball.style.animationDelay = `${(setIdx * 6 + i) * 0.08}s`;
+      ballsDiv.appendChild(ball);
+    });
+    row.appendChild(label);
+    row.appendChild(ballsDiv);
+    setDiv.appendChild(row);
+
+    const actions = document.createElement('div');
+    actions.className = 'set-actions';
+    const matchInfo = document.createElement('div');
+    matchInfo.className = 'match-info ' + getAnalyzeClass(set);
+    matchInfo.textContent = analyzeSet(set);
+    actions.appendChild(matchInfo);
+
+    const favBtn = document.createElement('button');
+    favBtn.className = 'btn btn-sm';
+    favBtn.textContent = '⭐ 저장';
+    favBtn.addEventListener('click', () => saveFavorite(set, favBtn));
+    actions.appendChild(favBtn);
+
+    const qrBtn = document.createElement('button');
+    qrBtn.className = 'btn btn-sm btn-ghost';
+    qrBtn.textContent = 'QR';
+    qrBtn.addEventListener('click', () => showQR(set));
+    actions.appendChild(qrBtn);
+
+    setDiv.appendChild(actions);
+    setsEl.appendChild(setDiv);
+  });
+}
+
+// 번호 분석
+function analyzeSet(set) {
+  const sum = set.reduce((a, b) => a + b, 0);
+  const odds = set.filter(n => n % 2 === 1).length;
+  const evens = 6 - odds;
+  const low = set.filter(n => n <= 15).length;
+  const mid = set.filter(n => n >= 16 && n <= 30).length;
+  const high = set.filter(n => n >= 31).length;
+  return `합계 ${sum} · 홀${odds}:짝${evens} · 저${low}·중${mid}·고${high}`;
+}
+function getAnalyzeClass(set) {
+  const sum = set.reduce((a, b) => a + b, 0);
+  // 합계 100~175 (통계적 황금구간)이면 ok, 그 외엔 일반
+  if (sum >= 100 && sum <= 175) return 'ok';
+  return '';
+}
+
+// 즐겨찾기
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch { return []; }
+}
+function saveFavorite(set, btn) {
+  const favs = getFavorites();
+  const key = set.join(',');
+  if (favs.some(f => f.nums.join(',') === key)) {
+    btn.textContent = '이미 저장됨';
+    setTimeout(() => btn.textContent = '⭐ 저장', 1200);
+    return;
+  }
+  favs.unshift({ nums: set, savedAt: Date.now() });
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+  btn.textContent = '✓ 저장됨';
+  btn.disabled = true;
+}
+function renderFavorites() {
+  const favs = getFavorites();
+  const wrap = $('favoritesList');
+  if (favs.length === 0) {
+    wrap.innerHTML = '<div class="empty">저장된 번호가 없습니다.<br>생성 탭에서 ⭐ 버튼을 눌러 저장하세요.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  favs.forEach((f, idx) => {
+    const div = document.createElement('div');
+    div.className = 'set';
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    const ballsDiv = document.createElement('div');
+    ballsDiv.className = 'balls';
+    f.nums.forEach(n => {
+      const b = document.createElement('div');
+      b.className = `ball ${getBallClass(n)}`;
+      b.textContent = n;
+      b.style.opacity = 1; b.style.transform = 'none'; b.style.animation = 'none';
+      ballsDiv.appendChild(b);
+    });
+    row.appendChild(ballsDiv);
+    div.appendChild(row);
+
+    const actions = document.createElement('div');
+    actions.className = 'set-actions';
+    const info = document.createElement('div');
+    info.className = 'match-info ' + getAnalyzeClass(f.nums);
+    info.textContent = new Date(f.savedAt).toLocaleString('ko-KR') + ' · ' + analyzeSet(f.nums);
+    actions.appendChild(info);
+
+    const qrBtn = document.createElement('button');
+    qrBtn.className = 'btn btn-sm btn-ghost';
+    qrBtn.textContent = 'QR';
+    qrBtn.addEventListener('click', () => showQR(f.nums));
+    actions.appendChild(qrBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-sm btn-danger';
+    delBtn.textContent = '삭제';
+    delBtn.addEventListener('click', () => {
+      const list = getFavorites();
+      list.splice(idx, 1);
+      localStorage.setItem(FAV_KEY, JSON.stringify(list));
+      renderFavorites();
+    });
+    actions.appendChild(delBtn);
+
+    div.appendChild(actions);
+    wrap.appendChild(div);
+  });
+}
+$('clearFavBtn').addEventListener('click', () => {
+  if (!confirm('즐겨찾기를 모두 삭제할까요?')) return;
+  localStorage.removeItem(FAV_KEY);
+  alert('삭제되었습니다.');
+});
+
+// QR
+function showQR(set) {
+  const text = '로또번호: ' + set.join('-');
+  $('qrNums').textContent = set.join(' · ');
+  $('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+  $('qrModal').classList.add('show');
+}
+$('qrCloseBtn').addEventListener('click', () => $('qrModal').classList.remove('show'));
+$('qrModal').addEventListener('click', e => {
+  if (e.target.id === 'qrModal') $('qrModal').classList.remove('show');
+});
+
+// 로컬 랜덤 코멘트 (API 불필요)
+const COMMENTS = {
+  // 일반 응원 메시지
+  general: [
+    '오늘은 느낌이 좋아요! 🍀',
+    '1등의 기운이 느껴져요 ✨',
+    '인생 역전의 순간이 가까워졌네요! 💫',
+    '행운의 별이 당신을 비추고 있어요 ⭐',
+    '오늘 밤 좋은 꿈 꾸세요 🌙',
+    '믿음이 곧 당첨입니다! 🙏',
+    '대박의 예감이 듭니다 🎉',
+    '이 번호로 인생을 바꿔보세요 💎',
+    '복권은 희망입니다 🌈',
+    '당첨되면 한턱 쏘세요 😉',
+    '조용히 기도해보세요 🤲',
+    '천운이 함께하길! 🌟',
+    '월요일이 기다려지네요 📅',
+    '발표날까지 마음 단단히! 💪',
+    '꿈은 이루어진다 ✨',
+    '용기 있는 자에게 행운이! 🦁',
+    '이번 주는 당신의 차례예요 🎯',
+    '좋은 일이 생길 것 같아요 🍀',
+  ],
+  // 모두 한 자리 수가 많을 때 (1~10에 4개 이상)
+  lowNumbers: [
+    '작은 숫자들의 반란이 시작됩니다! 🐜',
+    '낮은 번호 좋아하시는군요! 신선해요 🌱',
+    '한 자릿수의 힘을 믿어보세요 💪',
+  ],
+  // 큰 숫자가 많을 때 (36~45에 4개 이상)
+  highNumbers: [
+    '큰 숫자에 베팅! 통 크시네요 🎲',
+    '높이 나는 새가 멀리 봅니다 🦅',
+    '대담한 선택입니다! 👑',
+  ],
+  // 연속 번호가 3개 이상일 때
+  consecutive: [
+    '연속된 번호가 보이네요, 의외의 행운! 🔗',
+    '나란히 줄선 숫자들, 줄줄이 당첨? 🚂',
+    '연속의 미학! 좋은 패턴이에요 ✨',
+  ],
+  // 모두 짝수 또는 모두 홀수
+  allSameParity: [
+    '균형의 미가 느껴지는 조합이네요 ⚖️',
+    '한쪽으로 통일! 강한 의지가 보여요 💎',
+    '독특한 패턴이에요, 행운이 따르길! 🎯',
+  ],
+  // 합계가 100~170 (가장 많이 나오는 구간)
+  goldenSum: [
+    '황금 구간 합계! 통계학적으로도 좋아요 📊',
+    '균형 잡힌 합계, 베테랑의 향기 🏆',
+    '안정적인 조합이네요 🎯',
+  ],
+  // 합계가 너무 낮거나 높을 때
+  extremeSum: [
+    '극단적인 조합! 대박 아니면 쪽박? 🎢',
+    '도전적인 합계네요, 용기에 박수! 👏',
+    '튀는 조합! 운명이 바뀔지도? 🔮',
+  ],
+};
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function getLocalComment(sets) {
+  // 5세트 중 첫 번째 세트의 특성을 분석 (또는 랜덤 1세트)
+  const set = sets[Math.floor(Math.random() * sets.length)];
+  const sum = set.reduce((a, b) => a + b, 0);
+  const lowCount = set.filter(n => n <= 10).length;
+  const highCount = set.filter(n => n >= 36).length;
+  const evenCount = set.filter(n => n % 2 === 0).length;
+  
+  // 연속 번호 체크
+  const sorted = [...set].sort((a, b) => a - b);
+  let consecutive = 0;
+  let maxConsecutive = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] - sorted[i-1] === 1) {
+      consecutive++;
+      maxConsecutive = Math.max(maxConsecutive, consecutive + 1);
+    } else {
+      consecutive = 0;
+    }
+  }
+  
+  // 특수 케이스를 70% 확률로 우선 적용 (있다면)
+  const candidates = [];
+  if (lowCount >= 4) candidates.push(COMMENTS.lowNumbers);
+  if (highCount >= 4) candidates.push(COMMENTS.highNumbers);
+  if (maxConsecutive >= 3) candidates.push(COMMENTS.consecutive);
+  if (evenCount === 6 || evenCount === 0) candidates.push(COMMENTS.allSameParity);
+  if (sum >= 100 && sum <= 170) candidates.push(COMMENTS.goldenSum);
+  if (sum < 80 || sum > 200) candidates.push(COMMENTS.extremeSum);
+  
+  if (candidates.length > 0 && Math.random() < 0.7) {
+    return pick(pick(candidates));
+  }
+  return pick(COMMENTS.general);
+}
+
+function showComment(sets) {
+  $('commentBox').classList.remove('hidden', 'error');
+  $('commentBox').innerHTML = '<span class="loading-dots">행운의 메시지를 받는 중</span>';
+  // 살짝 딜레이를 줘서 자연스럽게 (즉시 나오면 너무 빠름)
+  setTimeout(() => {
+    $('commentBox').textContent = getLocalComment(sets);
+  }, 600);
+}
+
+$('generateBtn').addEventListener('click', () => {
+  $('generateBtn').disabled = true;
+  const sets = Array.from({ length: 5 }, () => generateSet());
+  renderSets(sets);
+  setTimeout(() => {
+    showComment(sets);
+    $('generateBtn').disabled = false;
+  }, 5 * 6 * 80 + 500);
+});
+</script>
+</body></html>
